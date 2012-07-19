@@ -87,12 +87,16 @@ for(idx.c in seq_along(cluster.list)){
 	for(idx in seq_along(this.data$set)){
 
 		row_data = this.data[idx,]
-		if(is.na(row_data$st_date)){
+		if(is.na(row_data$st_date) | as.numeric(row_data[t_var]) == 0){
 			test.first = test.first + 1
 			next
 			}
     
 		start_date = as.Date(row_data$st_date + as.numeric(row_data[t_var]))
+		if(start_date > as.Date("2011-04-15")){
+		  test.first = test.first + 1
+		  next
+		}
 		print(paste(idx/length(data$set)," - ",this.cluster," - ",start_date,sep=""))
 		#end_date = as.Date(row_data$st_date + row_data$dec)
 		#peak_date = as.Date(row_data$st_date + row_data$peak)
@@ -130,6 +134,9 @@ for(idx.c in seq_along(cluster.list)){
 	mean.met$c_date <- NULL
 
 	this.data = subset(this.data,!is.na(st_date))
+	this.data = subset(this.data,this.data[t_var] != 0)
+	this.data = subset(this.data,as.Date(as.Date(this.data$st_date) + this.data[1,t_var]) < as.Date("2011-04-15"))
+  
 	new.data = cbind(this.data,mean.met)
 	if(idx.c==1){
 		new.yearly.data = new.data
