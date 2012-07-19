@@ -7,7 +7,6 @@ library(maptools)
 library(lme4)
 library(languageR)
 
-##############################
 #### For a given cluster, grab a 15-day window around the given date, and summarize into a series of data frames
 get_met_data=cmpfun(function(cluster,the_date){
 	start_interval = as.Date(as.Date(the_date)-7)
@@ -75,32 +74,26 @@ out.frame=subset(out.frame,!is.na(varb))
 out.frame
 })
 
-
-##############################
-
-root_dir="E:\\NASA_NERP\\HotspotFFDI\\data\\results\\Trial2\\"
-input_file="complete_frame.csv"
+process_all_clusters=function(sset,t_var){
 data = read.csv(paste(root_dir,input_file,sep=""))
-data = subset(data,set=="D")
-
-station_root = "G:\\SILO_Data\\complete_stations_min\\"
-station_list = read.csv("E:\\NASA_NERP\\HotspotFFDI\\data\\ready\\silo_stations.csv")
+data = subset(data,set==sset)
 data$st_date = as.Date(data$st_date)
 cluster.list = unique(data$clust)
 
-Start.Time = Sys.time()
 for(idx.c in seq_along(cluster.list)){
 	this.cluster = cluster.list[idx.c]
 	this.data = subset(data,clust==this.cluster)
 	test.first=1
 	for(idx in seq_along(this.data$set)){
-		print(paste(idx/length(data$set)," - ",cluster," - ",start_date,sep=""))
+
 		row_data = this.data[idx,]
 		if(is.na(row_data$st_date)){
 			test.first = test.first + 1
 			next
 			}
-		start_date = as.Date(row_data$st_date + row_data$inc)
+    
+		start_date = as.Date(row_data$st_date + as.numeric(row_data[t_var]))
+		print(paste(idx/length(data$set)," - ",this.cluster," - ",start_date,sep=""))
 		#end_date = as.Date(row_data$st_date + row_data$dec)
 		#peak_date = as.Date(row_data$st_date + row_data$peak)
 		#pre_date = as.Date(row_data$st_date + row_data$pr.peak)
@@ -151,15 +144,53 @@ for(idx.c in seq_along(cluster.list)){
 		}else{
 		new.cluster.data=rbind(new.cluster.data,row_data)
 	}
+  list(clust = new.cluster.data, year=new.yearly.data)
+}}
 
-}
 
+root_dir="E:\\NASA_NERP\\HotspotFFDI\\data\\results\\Trial2\\"
+out_root_dir="E:\\NASA_NERP\\HotspotFFDI\\data\\results\\Trial3\\"
+input_file="complete_frame.csv"
+station_root = "G:\\SILO_Data\\complete_stations_min\\"
+station_list = read.csv("E:\\NASA_NERP\\HotspotFFDI\\data\\ready\\silo_stations.csv")
+
+year.d=process_all_clusters("A","dec")
+
+clust.d=new.cluster.data
 year.n=new.yearly.data
 clust.n=new.cluster.data
 year.a = new.yearly.data
 clust.a = new.cluster.data
 
+cluster_year_frame = rbind(year.a,year.d,year.n)
+cluster_frame = rbind(clust.a,clust.d,clust.n)
 
-End.Time = Sys.time()
+## Remove unwanted cluster_frame columns
+cluster_frame["X"] = NULL
+cluster_frame["st_date"] = NULL
+cluster_frame["fs_start"] = NULL
+cluster_frame["inc"] = NULL
+cluster_frame["inc.hs"] = NULL
+cluster_frame["dec"] = NULL
+cluster_frame["peak"] = NULL
+cluster_frame["peak_hs"] = NULL
+cluster_frame["len"] = NULL
+cluster_frame["psm"] = NULL
+cluster_frame["pr.peak"] = NULL
+cluster_frame["po.peak"] = NULL
+
+cluster_frame=reshape(cluster_frame,varying=list(names(cluster_frame)[4:21],names(cluster_frame)[22:39],names(cluster_frame)[40:57]),v.names=c("est","p","mean"),direction="long",times=names(cluster_frame)[22:39])
+cluster_frame["id"] = NULL
+cluster_frame["inc_hs"] = NULL
+names(cluster_frame)=c("set","clust","var","est","p","mean")
+
+write.csv(cluster_frame,paste(out_root_dir,"cluster_start_stats.csv",sep=""))
+
+### Remove unwanted cluster_year_frame columns
+cluster_year_frame["X"] = NULL
+ge=reshape(cluster_year_frame,varying=list(names(cluster_year_frame)[5:31]),v.names=c("mean"),direction="long",times=names(cluster_year_frame)[5:31])
+write.csv(cluster_year_frame,paste(out_root_dir,"cluster_year_start_stats.csv",sep=""))
+
+
 
 
